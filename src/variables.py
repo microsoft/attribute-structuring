@@ -8,6 +8,19 @@ import openai
 import os 
 
 
+api_key = os.environ.get("OPENAI_API_KEY")
+api_base = os.environ.get("OPENAI_API_BASE")
+api_params = {'api_key': api_key, 'api_type': "azure", "api_base":api_base, "api_version":"2023-03-15-preview"}
+model_params  = {"model":"gpt-4-32k-0314", "temperature":0.1, "max_tokens":2000, "top_p":1}
+
+openai.api_type= api_params['api_type']
+openai.api_version= api_params['api_version']
+openai.api_base= api_params['api_base']
+openai.api_key = api_params['api_key']
+
+llm = AzureChatOpenAI(deployment_name='gpt-4-32k-0314', openai_api_version=api_params['api_version'], temperature=0.1,max_tokens=2000)
+  
+
 prompt_score = """You will be given a python dictionary containing a clinical variable as a key and a list containing two values for the variable as values.
 
 Your task is to rate how similar the values are given the variable. Compare value1 and value2 for semantic similarity(similarity in meaning) given the variable and the criteria below. Two values can be very similar in meaning even if they are phrased differently. Also remember that this is a clinical document, take that into account.
@@ -23,7 +36,7 @@ variable:
 value1: {{value1}}
 value2: {{value2}}
 
-Evaluation Form (scores ONLY):
+SCORE:
 
  """
 
@@ -122,15 +135,5 @@ context_query = """ You are tasked with generating a high quality clinical disch
     Context : 
           """
 
-api_key = os.environ.get("OPENAI_API_KEY")
-api_base = os.environ.get("OPENAI_API_BASE")
-api_params = {'api_key': api_key, 'api_type': "azure", "api_base":api_base, "api_version":"2023-03-15-preview"}
-model_params  = {"model":"gpt-4-32k-0314", "temperature":0.1, "max_tokens":2000, "top_p":1}
 
-openai.api_type= api_params['api_type']
-openai.api_version= api_params['api_version']
-openai.api_base= api_params['api_base']
-openai.api_key = api_params['api_key']
 
-llm = AzureChatOpenAI(deployment_name='gpt-4-32k-0314', openai_api_version=api_params['api_version'], temperature=0.1,max_tokens=2000)
-  

@@ -23,12 +23,13 @@ from structuring import structure_text
 
 
 
-def preprocess_notes(mimiciii, tiktoken_len, minimum_notes=5, context_length=4000):
+def preprocess_notes(mimiciii, tiktoken_len,test_keys, minimum_notes=5, context_length=4000):
     test_notes = {}
     ground_structured = {}
-
+    
+    
     for k, v in mimiciii.items():
-        if 'discharge summary' not in v or len(v) < minimum_notes:  # at least a DS plus min_notes 
+        if k not in test_keys: #or 'discharge summary' not in v or len(v) < minimum_notes:  # at least a DS plus min_notes 
             continue
 
         sorted_items = sorted(v.items(), key=lambda x: x[1][1])
@@ -41,15 +42,17 @@ def preprocess_notes(mimiciii, tiktoken_len, minimum_notes=5, context_length=400
 
         min_context_len = context_length - 400  # select notes with len closer to the full context 
         
-        if (len_text > min_context_len and len_text < context_length) and len_text > len_ds * 1.2: # source note should be longer than the summary
+        #if (len_text > min_context_len and len_text < context_length) and len_text > len_ds * 1.2: # source note should be longer than the summary
+        if True:
             
-            ground_structured[k] = structure_text(v['discharge summary'][0])  # structure to choose notes that have most of the important attributes
-            ground_len = len([w for w, y in ground_structured[k].items() if y.lower() != 'none'])
+            #ground_structured[k] = structure_text(v['discharge summary'][0])  # structure to choose notes that have most of the important attributes
+            #ground_len = len([w for w, y in ground_structured[k].items() if y.lower() != 'none'])
             
-            if ground_len >= 13:
-                test_notes[k] = {"full": joined_text, "summary": v['discharge summary'][0]}
+            #if ground_len >= 13:
+            test_notes[k] = {"full": joined_text, "summary": v['discharge summary'][0]}
 
-                break  
+            #break  
+        
     return test_notes
 
 
