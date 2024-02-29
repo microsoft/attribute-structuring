@@ -1,7 +1,7 @@
 import json
 import tiktoken
-import numpy as np
 import os
+import numpy as np
 import warnings
 
 from select_notes_from_mimic import preprocess_notes
@@ -13,14 +13,16 @@ from metrics import calculate_metric_scores
 warnings.filterwarnings('ignore')
 
 
-# return the number of tokens in a text
+
 def tiktoken_len(text):
+  # return the number of tokens in a text
   tokens = tik_tokenizer.encode(text, disallowed_special = ())
   return len(tokens)  
 
 
 
 def get_correlation_scores(metric_scores,metric_scores_full,gpt_scores_full,gpt_frequent_values,annotations):
+    # Return the correlation scores for both unstructured and structured documents
     r1_scores = {x:y['rouge1'] for x,y in metric_scores.items()}
     rL_scores = {x:y['rougeL'] for x,y in metric_scores.items()}
     bertscores = {x:y['bertscore'] for x,y in metric_scores.items()}
@@ -47,6 +49,8 @@ def get_correlation_scores(metric_scores,metric_scores_full,gpt_scores_full,gpt_
 
 
 def generate_structure_score(mimic_notes, test_keys):
+    # generate summaries, structure the generated summary, score the summaries
+
     # Select notes from MIMIC that fit into the MAX_CONTEXT_LEN
     selected_notes = preprocess_notes(mimic_notes, tiktoken_len, test_keys)
     print(f"selected {len(selected_notes)} notes")
@@ -58,19 +62,17 @@ def generate_structure_score(mimic_notes, test_keys):
     # Structure the generated and ground summaries 
     structured_summaries =  structure_ground_gen_summaries(generated_summaries, selected_notes)
     print(f"structured  {len(structured_summaries)} summaries")
-
     
-    # Get scores for each of the structured attributes
-    multi_run_input = []
+    # Get scores for each of the structured attributes (multiple_runs to account for variations)
+    scored_summaries_structured = []
     for k,v in structured_summaries.items():
-      for _ in range(3):
-         multi_run_input.append(score_structured({k:v}))
-    #scored_summaries_structured = score_structured(structured_summaries)
-
+      for _ in range(5):
+         scored_summaries_structured.append(score_structured({k:v}))
+   
     # Score the whole summary without structuring 
     scored_summaries_full = score_full(structured_summaries) 
     
-    return  multi_run_input, scored_summaries_full,structured_summaries
+    return  scored_summaries_structured, scored_summaries_full,structured_summaries
     
 def get_baseline_scores(structured_summaries):
    # Get the baseline scores(rouge-1, rouge-L, BERTScore)
@@ -82,8 +84,8 @@ def get_baseline_scores(structured_summaries):
     return metric_scores, metric_scores_full
 
 def print_output(metric, output_dict):
-      
-      
+      # print out calculated metrics
+
       lst_vals = [v for _,v in output_dict.items()]
       lst_vals.insert(0,metric)
       
@@ -97,17 +99,19 @@ if __name__ == "__main__":
   
    parent_dir = os.path.dirname(current_dir)
    data_dir = os.path.join(parent_dir,'data')
-   mimic_dir ="/mnt/hanoverdev/scratch/zelalem/data/mimiciii_notes.json"
+
+   mimic_dir ="MIMIC_DIR" # Replace with a path to your mimic dataset
+   
 
    
    annotations_dir = os.path.join(data_dir,"annotations.json")
-   claim_dir = os.path.join(data_dir,"yiqing_scores.json")
+   claim_dir = os.path.join(data_dir,"claim_scores.json")
    
    # Read input data
    # MIMIC NOTES
    with open(mimic_dir) as infile:
       mimic_notes = json.load(infile)
-
+     
    # Manual Annotations
    with open(annotations_dir) as infile:
       annotations = infile.read()
@@ -115,26 +119,24 @@ if __name__ == "__main__":
 
    # Claim-based eval scores
    with open(claim_dir) as infile:
-      yiqing_scores = json.load(infile)  
-   
+      claim_scores = json.load(infile)  
    
    # document keys with manual annotations
    annotated_keys = [k for k,_ in annotations[0].items()]
    
    # tiktoken tokenizer for contex size
    token_text = next(iter(mimic_notes.values()))['discharge summary'][0]
-   #token_text = next(iter(mimic_notes.values()))['full'] 
    tik_tokenizer = tiktoken.get_encoding('p50k_base')
    
-   # 
-   multi_run_input, scored_summaries_full,structured_summaries = generate_structure_score(mimic_notes,annotated_keys[:6])   
+   
+   scored_summaries_structured, scored_summaries_full,structured_summaries = generate_structure_score(mimic_notes,annotated_keys)   
    baseline_scores, baseline_scores_full = get_baseline_scores(structured_summaries)
    
-   gpt_frequent_values = get_most_frequent_values(multi_run_input)
-   print(scored_summaries_full)
+   gpt_frequent_values = get_most_frequent_values(scored_summaries_structured)
+   
 
    gpt_user, gpt_user_full, r1_user, r1_user_full, rL_user, rL_user_full, bert_user, bert_user_full = get_correlation_scores(baseline_scores, baseline_scores_full,scored_summaries_full, gpt_frequent_values,annotations)
-   # print(gpt_user, gpt_user_full, r1_user, r1_user_full, rL_user, rL_user_full, bert_user, bert_user_full)
+   
    
    print()
 
@@ -151,9 +153,7 @@ if __name__ == "__main__":
    print_output("BERT unstructured",bert_user_full)
    print_output("BERT structured  ",bert_user)
    
-
-   yiqing_full = get_error_scores_full2(yiqing_scores,annotations)
-   
-   print_output("claim-based      ",yiqing_full)
+   claim_full = get_error_scores_full2(claim_scores,annotations)
+   print_output("claim-based      ",claim_full)
 
    

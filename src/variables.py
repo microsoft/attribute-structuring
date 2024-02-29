@@ -11,14 +11,14 @@ import os
 api_key = os.environ.get("OPENAI_API_KEY")
 api_base = os.environ.get("OPENAI_API_BASE")
 api_params = {'api_key': api_key, 'api_type': "azure", "api_base":api_base, "api_version":"2023-03-15-preview"}
-model_params  = {"model":"gpt-4-32k-0314", "temperature":0.1, "max_tokens":2000, "top_p":1}
+model_params  = {"model":"gpt-4-32k-0314", "temperature":0, "max_tokens":2000, "top_p":1}
 
 openai.api_type= api_params['api_type']
 openai.api_version= api_params['api_version']
 openai.api_base= api_params['api_base']
 openai.api_key = api_params['api_key']
 
-llm = AzureChatOpenAI(deployment_name='gpt-4-32k-0314', openai_api_version=api_params['api_version'], temperature=0.1,max_tokens=2000)
+llm = AzureChatOpenAI(deployment_name='gpt-4-32k-0314', openai_api_version=api_params['api_version'], temperature=0,max_tokens=2000)
   
 
 prompt_score = """You will be given a python dictionary containing a clinical variable as a key and a list containing two values for the variable as values.
@@ -42,8 +42,8 @@ SCORE:
 
 prompt_score_full = """You will be given two clinical discharge summaries, summary1 and summary2.
 
-Your task is to rate how similar the two summaries are from 1-10. 1 is not similar while 10 is essentially identical. Focus on the following important clinical variables when performing the comparison:
-  How similar is the diagnosis, how similar are the goals, how similar is hospital course and history, how similar are the medications administered, how similar are the physical condition diagnoses, how similar are the followup consults and procedures, how similar are the lab tests performed, how similar are the patients discharge status, is the follow-up instructions similar, are there any similar appointments, and instructions
+Your task is to rate how semantically similar the two discharge summaries are focus on the following important clinical variables when performing the comparison:
+  How similar are the diagnoses, how similar are the goals, how similar is hospital course and history, how similar are the medications administered, how similar are the physical condition diagnoses, how similar are the followup consults and procedures, how similar are the lab tests performed, how similar are the patients discharge status, is the follow-up instructions similar, are there any similar appointments, and instructions. The final score should be the overall simialrity of the two summaries with respect to all the variables. Return a score between 1-10. 1 is not similar while 10 is essentially identical. 
 only return the score, dont add any extra text
 Here are the inputs discharge summaries:
  summary1: {{value1}}
@@ -121,19 +121,19 @@ prompt = ChatPromptTemplate(messages=[HumanMessagePromptTemplate.from_template(t
 
 
 
+
+
+
 context_query = """ You are tasked with generating a high quality clinical discharge summary for the provided input text {token_text}. The summary has to be very relevant to the input document and cover the most important aspects of the input. Follow the following steps:
   Step 1: Generate the most common sections that usually appear in a clinical discharge summary.
-  Step 1.5: Not all the sections from Step 1 will have content. See which of those sections have contents from the {token_text}. Remove the sections that don't have information.
-  Step 2 : Use the following concepts to generate appropriate content. These are not Sections. Concepts:
+  Step 2: Not all the sections from Step 1 will have content. See which of those sections have contents from the {token_text}. Remove the sections that don't have information.
+  Step 3 : Use the following concepts to generate appropriate content. These are not Sections. Concepts:
     patient information and service type, diagnosis given at the time of admission,  brief summary of initial presentation and diagnostic evaluation, pertinent physical findings relevant to diagnoses, goals of care; level of treatment,code status(e.g. curative,life-prolonging palliative, and symptomatic palliative), course in hospital; synotpic,problem-based description of sequential events and respective evaluations, treatments, and prognoses, hospital consults; description of specialty and/or allied health consults, procedures in hospital; a list of procedures with key findings and date, principal discharge diagnosis or main reason for admission and all additional pertinent diagnoses where applicable,  discharge medications with specific description of new, altered, and discontinued medications and rationale for changes,  lab tests and investigative results, tests ordered during the hospitalization that are pending at the time of discharge, outcome of care/condition at discharge; sense of the patient health status at discharge includes functional status, and cognitive status, outstanding issues for follow-up and recommendations to a recipient health-care provider during discharge, appointments after discharge including person responsible for scheduling, care provider, discharge instructions; list of information/education provided to the patient during discharge, main author of the discharge summary or attending clinician. 
 
-   Step 3: Put the generated content in a coherent order. Format in such a way that the dishcarge summary has an excellent coherence, fluency, and consistency. Remember to use the sections you generated in Step 1, don't make the concepts in Step 2 as a section, they are just suggestive concepts not sections. 
+   Step 4: Put the generated content in a coherent order. Format in such a way that the dishcarge summary has an excellent coherence, fluency, and consistency. Remember to use the sections you generated in Step 1, don't make the concepts in Step 2 as a section, they are just suggestive concepts not sections. 
 
-   Step 4: Remove sections with no information. Dont put 'not specified' or 'not mentioned' or 'none specified' in a section. Just remove everything for that section including the section header.
-   Step 5: Return the final discharge summary with all the remaining sections that have contents. Remember to remove sections with no information
+   Step 5: Remove sections with no information. Dont put 'not specified' or 'not mentioned' or 'none specified' in a section. Just remove everything for that section including the section header.
+   Step 6: Return the final discharge summary with all the remaining sections that have contents. Remember to remove sections with no information
      
     Context : 
           """
-
-
-

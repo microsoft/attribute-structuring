@@ -23,6 +23,7 @@ def extract_numbers(text):
     return numbers[0]
 
 def score_structured(structured_dict):
+    # scores structured documents attributes wise from 1 to 4. 
     scores = {}
 
     for instance_id, instance_data in structured_dict.items():
@@ -47,7 +48,7 @@ def score_structured(structured_dict):
             for _ in range(3):
                 try:
                     
-                    response = openai.ChatCompletion.create(engine=llm.deployment_name,messages=conversation)
+                    response = openai.ChatCompletion.create(engine=llm.deployment_name,messages=conversation,max_tokens=1000)
                     response_text = response['choices'][0]['message']['content']
                     parsed_text = extract_numbers(response_text)
 
@@ -65,6 +66,8 @@ def score_structured(structured_dict):
 
 
 def score_full(unstructured_dict):
+    # scores the unstructured summaries from 1 to 10
+
     scores = {}
 
     for instance_id, instance_data in unstructured_dict.items():
@@ -86,19 +89,20 @@ def score_full(unstructured_dict):
         for _ in range(5):
             try:
                 #response = chat_completion(params,conversation)
-                response = openai.ChatCompletion.create(engine=llm.deployment_name,messages=conversation)
+                response = openai.ChatCompletion.create(engine=llm.deployment_name,messages=conversation,max_tokens=1000,temperature=0)
                 response_text = response['choices'][0]['message']['content']
                 parsed_text = extract_numbers(response_text)
                 
-                if float(parsed_text) in [1,2,3,4,5,6,7,8,9]:
+                if float(parsed_text) in [1,2,3,4,5,6,7,8,9,10]:
                     instance_scores.append(parsed_text)
                     
             except openai.error.RateLimitError:
                 time.sleep(5)  
             except Exception as e:
                     print(e) 
-     
-        scores[instance_id] = instance_scores
+                    
+        if instance_scores:
+            scores[instance_id] = instance_scores
 
     return scores
 
@@ -133,6 +137,7 @@ def get_most_frequent_values(multi_run_input):
         sample_input[k].append(v)
 
     return most_frequent_value(sample_input)
+
 def get_values(dict1,dict2):
   common_keys = sorted([k for k in (set(dict1.keys()) & set(dict2.keys())) if k!='author'])
   values1 = [float(dict1[key]) for key in common_keys]
@@ -157,7 +162,7 @@ def normalize_list(lst, min_val=1, max_val=4):
     return normalized_lst
 def calculate_mae(values1, values2):
     absolute_errors = [abs(v1 - v2) for v1,v2 in zip(values1, values2)]
-    #print(absolute_errors)
+
     mae = sum(absolute_errors) / len(absolute_errors)
     return mae
 
@@ -166,6 +171,7 @@ def calculate_rmse(values1, values2):
     mean_squared_error = sum(squared_errors) / len(squared_errors)
     rmse = math.sqrt(mean_squared_error)
     return rmse
+
 def calculate_correlations(values1, values2):
     # Calculate the minimum and maximum values in both sets of values
     min_val_1 = min(values1)
@@ -177,8 +183,7 @@ def calculate_correlations(values1, values2):
     values1 = [(val - min_val_1) / (max_val_1 - min_val_1) for val in values1]
     values2 = [(val - min_val_2) / (max_val_2 - min_val_2) for val in values2]
 
-    # print(values1)
-    # print(values2)
+    
     # Calculate Pearson correlation
     pearson_corr, _ = pearsonr(values1, values2)
 
@@ -230,13 +235,11 @@ def get_error_scores_full2(auto_scoring,annotations):
   for k,v in auto_scoring.items():
     for ann in annotations:
       mult_vals = get_values_multiple([ann[k] for ann in annotations])
-      #_,val2 = get_values(annotations1[k],annotations1[k])
-      #   = get_values(annotation1[k],v)
+      
     average_values = [sum(col) / len(col) for col in zip(*mult_vals)]
     
     
     value1.append(np.mean(normalize_list(average_values)))
-    #value1.append(np.mean(average_values))
     value2.append(v)
   
   mae = calculate_mae(value1,value2)
